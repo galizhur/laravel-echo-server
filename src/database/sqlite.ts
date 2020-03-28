@@ -52,4 +52,9 @@ export class SQLiteDatabase implements DatabaseDriver {
             $value: JSON.stringify(value)
         });
     }
+
+    /**
+     * Publish data on a channel.
+     */
+    publish(channel: string, data: any): void { }
 }

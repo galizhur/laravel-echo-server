@@ -1,5 +1,4 @@
 var _ = require('lodash');
-import { Channel } from './channel';
 import { Database } from './../database';
 import { Log } from './../log';
 
@@ -109,7 +108,7 @@ export class PresenceChannel {
             this.isMember(channel, member).then(is_member => {
                 if (!is_member) {
                     delete member.socketId;
-                    this.onLeave(channel, member);
+                    this.onLeave(socket, channel, member);
                 }
             });
         }, error => Log.error(error));
@@ -125,15 +124,23 @@ export class PresenceChannel {
             .broadcast
             .to(channel)
             .emit('presence:joining', channel, member);
+
+        if (this.options.databaseConfig.publishPresence === true) {
+            this.db.publish(`ChannelJoin`, { 'socket': { 'id': socket.id }, channel, member });
+        }
     }
 
     /**
      * On leave emitter.
      */
-    onLeave(channel: string, member: any): void {
+    onLeave(socket: any, channel: string, member: any): void {
         this.io
             .to(channel)
             .emit('presence:leaving', channel, member);
+
+        if (this.options.databaseConfig.publishPresence === true) {
+            this.db.publish(`ChannelLeave`, { 'socket': { 'id': socket.id }, channel, member });
+        }
     }
 
     /**
