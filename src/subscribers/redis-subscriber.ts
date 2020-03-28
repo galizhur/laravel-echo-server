@@ -37,6 +37,10 @@ export class RedisSubscriber implements Subscriber {
 
         return new Promise((resolve, reject) => {
             this._redis.on('pmessage', (subscribed, channel, message) => {
+                if (channel.startsWith(this.options.databaseConfig.redis.adapterKeyPrefix)) {
+                    return;
+                }
+
                 try {
                     message = JSON.parse(message);
 

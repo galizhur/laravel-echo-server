@@ -4,6 +4,7 @@ var https = require('https');
 var express = require('express');
 var url = require('url');
 var io = require('socket.io');
+var Redis = require('ioredis');
 var redisAdapter = require('socket.io-redis');
 import { Log } from './log';
 
@@ -118,7 +119,17 @@ export class Server {
         this.authorizeRequests();
 
         this.io = io(httpServer, this.options.socketio);
-        this.io.adapter(redisAdapter(this.options.databaseConfig.redis))
+
+        if (this.options.database == "redis") {
+            var pubClient = new Redis(this.options.databaseConfig.redis);
+            var subClient = new Redis(this.options.databaseConfig.redis);
+
+            this.io.adapter(redisAdapter({
+                key: this.options.databaseConfig.redis.adapterKey,
+                pubClient: pubClient,
+                subClient: subClient
+            }));
+        }
 
         return this.io;
     }
