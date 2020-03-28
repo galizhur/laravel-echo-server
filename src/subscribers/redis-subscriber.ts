@@ -41,6 +41,10 @@ export class RedisSubscriber implements Subscriber {
                     return;
                 }
 
+                if (channel.startsWith(`${this.options.databaseConfig.redis.adapterKeyPrefix}presence_`)) {
+                    return;
+                }
+
                 try {
                     message = JSON.parse(message);
 
