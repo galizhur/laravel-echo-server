@@ -19,11 +19,20 @@ export class RedisSubscriber implements Subscriber {
     private _keyPrefix: string;
 
     /**
+     *
+     * KeyPrefix for used in the redis Connection
+     *
+     * @type {String}
+     */
+    private _adapterKeyPrefix: string;
+
+    /**
      * Create a new instance of subscriber.
      *
      * @param {any} options
      */
     constructor(private options) {
+        this._adapterKeyPrefix = options.databaseConfig.redis.adapterKeyPrefix || 'socket.io';
         this._keyPrefix = options.databaseConfig.redis.keyPrefix || '';
         this._redis = new Redis(options.databaseConfig.redis);
     }
@@ -37,11 +46,11 @@ export class RedisSubscriber implements Subscriber {
 
         return new Promise((resolve, reject) => {
             this._redis.on('pmessage', (subscribed, channel, message) => {
-                if (channel.startsWith(this.options.databaseConfig.redis.adapterKeyPrefix)) {
+                if (channel.startsWith(this._adapterKeyPrefix)) {
                     return;
                 }
 
-                if (channel === `${this.options.databaseConfig.redis.keyPrefix}PresenceChannelUpdated`) {
+                if (channel === `${this._keyPrefix}PresenceChannelUpdated`) {
                     return;
                 }
 

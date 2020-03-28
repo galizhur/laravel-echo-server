@@ -121,11 +121,12 @@ export class Server {
         this.io = io(httpServer, this.options.socketio);
 
         if (this.options.database == "redis") {
+            var adapterKeyPrefix = this.options.databaseConfig.redis.adapterKeyPrefix || 'socket.io';
             var pubClient = new Redis(this.options.databaseConfig.redis);
             var subClient = new Redis(this.options.databaseConfig.redis);
 
             this.io.adapter(redisAdapter({
-                key: this.options.databaseConfig.redis.adapterKey,
+                key: adapterKeyPrefix,
                 pubClient: pubClient,
                 subClient: subClient
             }));
