@@ -126,7 +126,7 @@ export class PresenceChannel {
             .emit('presence:joining', channel, member);
 
         if (this.options.databaseConfig.publishPresence === true) {
-            this.db.publish(`presence_ChannelJoin`, { 'socket': { 'id': socket.id }, channel, member });
+            this.db.publish(`PresenceChannelUpdated`, { 'socket': { 'id': socket.id }, channel, member, type: 'join' });
         }
     }
 
@@ -139,7 +139,7 @@ export class PresenceChannel {
             .emit('presence:leaving', channel, member);
 
         if (this.options.databaseConfig.publishPresence === true) {
-            this.db.publish(`presence_ChannelLeave`, { 'socket': { 'id': socket.id }, channel, member });
+            this.db.publish(`PresenceChannelUpdated`, { 'socket': { 'id': socket.id }, channel, member, type: 'leave' });
         }
     }
 

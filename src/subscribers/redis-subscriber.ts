@@ -41,7 +41,7 @@ export class RedisSubscriber implements Subscriber {
                     return;
                 }
 
-                if (channel.startsWith(`${this.options.databaseConfig.redis.keyPrefix}presence_`)) {
+                if (channel === `${this.options.databaseConfig.redis.keyPrefix}PresenceChannelUpdated`) {
                     return;
                 }
 
