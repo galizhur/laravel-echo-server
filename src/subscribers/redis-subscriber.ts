@@ -32,8 +32,8 @@ export class RedisSubscriber implements Subscriber {
      * @param {any} options
      */
     constructor(private options) {
-        this._adapterKeyPrefix = options.databaseConfig.redis.adapterKeyPrefix || 'socket.io';
-        this._keyPrefix = options.databaseConfig.redis.keyPrefix || '';
+        this._adapterKeyPrefix = options.databaseConfig.redis.adapterKeyPrefix;
+        this._keyPrefix = options.databaseConfig.redis.keyPrefix;
         this._redis = new Redis(options.databaseConfig.redis);
     }
 

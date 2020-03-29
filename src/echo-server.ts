@@ -20,7 +20,10 @@ export class EchoServer {
         clients: [],
         database: 'redis',
         databaseConfig: {
-            redis: {},
+            redis: {
+                adapterKeyPrefix: 'socket.io',
+                keyPrefix: ''
+            },
             sqlite: {
                 databasePath: '/database/laravel-echo-server.sqlite'
             }

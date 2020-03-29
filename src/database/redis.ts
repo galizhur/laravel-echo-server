@@ -19,7 +19,7 @@ export class RedisDatabase implements DatabaseDriver {
      * Create a new cache instance.
      */
     constructor(options: any) {
-        this.keyPrefix = options.databaseConfig.redis.keyPrefix || '';
+        this.keyPrefix = options.databaseConfig.redis.keyPrefix;
         this.redis = new Redis(options.databaseConfig.redis);
     }
 
