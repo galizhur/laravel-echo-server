@@ -1,6 +1,7 @@
 import { PresenceChannel } from './presence-channel';
 import { PrivateChannel } from './private-channel';
 import { Log } from './../log';
+import { Call } from '../call';
 
 export class Channel {
     /**
@@ -14,6 +15,11 @@ export class Channel {
     protected _clientEvents: string[] = ['client-*'];
 
     /**
+     * Allowed call events
+     */
+    protected _callEvents: string[] = ['call-*'];
+
+    /**
      * Private channel instance.
      */
     private: PrivateChannel;
@@ -24,11 +30,17 @@ export class Channel {
     presence: PresenceChannel;
 
     /**
+     * Call handler instance.
+     */
+    call: Call;
+
+    /**
      * Create a new channel instance.
      */
     constructor(private io, private options) {
         this.private = new PrivateChannel(options);
         this.presence = new PresenceChannel(io, options);
+        this.call = new Call(io, options);
 
         if (this.options.devMode) {
             Log.success('Channels are ready.');
@@ -66,6 +78,25 @@ export class Channel {
                 this.io.sockets.connected[socket.id]
                     .broadcast.to(data.channel)
                     .emit(data.event, data.channel, data.data);
+            }
+        }
+    }
+
+    /**
+     * Trigger a call event
+     */
+    callEvent(socket, data): void {
+        try {
+            data = JSON.parse(data);
+        } catch (e) {
+            data = data;
+        }
+
+        if (data.event && data.channel) {
+            if (this.isCallEvent(data.event) &&
+                this.isPrivate(data.channel) &&
+                this.isInChannel(socket, data.channel)) {
+                this.call.handle(socket, data);
             }
         }
     }
@@ -145,7 +176,7 @@ export class Channel {
     }
 
     /**
-     * Check if client is a client event
+     * Check if event is a client event
      */
     isClientEvent(event: string): boolean {
         let isClientEvent = false;
@@ -156,6 +187,20 @@ export class Channel {
         });
 
         return isClientEvent;
+    }
+
+    /**
+     * Check if event is a call event
+     */
+    isCallEvent(event: string): boolean {
+        let isCallEvent = false;
+
+        this._callEvents.forEach(callEvent => {
+            let regex = new RegExp(callEvent.replace('\*', '.*'));
+            if (regex.test(event)) isCallEvent = true;
+        });
+
+        return isCallEvent;
     }
 
     /**

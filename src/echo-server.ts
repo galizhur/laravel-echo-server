@@ -197,6 +197,7 @@ export class EchoServer {
             this.onUnsubscribe(socket);
             this.onDisconnecting(socket);
             this.onClientEvent(socket);
+            this.onCallEvent(socket);
         });
     }
 
@@ -237,6 +238,15 @@ export class EchoServer {
     onClientEvent(socket: any): void {
         socket.on('client event', data => {
             this.channel.clientEvent(socket, data);
+        });
+    }
+
+    /**
+     * On call events.
+     */
+    onCallEvent(socket: any): void {
+        socket.on('video event', data => {
+            this.channel.callEvent(socket, data);
         });
     }
 }
