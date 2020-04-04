@@ -1,4 +1,5 @@
-const { RTCIceCandidate, RTCPeerConnection } = require('wrtc');
+const Peer = require('simple-peer')
+const wrtc = require('wrtc')
 
 /**
  * Laravel Echo Call handler
@@ -13,12 +14,6 @@ export class Call {
         this.options = options;
 
         this.participants = [];
-
-        this.peerConfig = {
-            iceServers: [{
-                urls: ['stun:stun.l.google.com:19302']
-            }]
-        };
     }
 
     /**
@@ -42,12 +37,6 @@ export class Call {
      */
     private participants: Array<any>;
 
-    /**
-     * RTC Peer default config.
-     *
-     * @type {object}
-     */
-    private peerConfig: any;
 
     /**
      * Handle call event.
@@ -55,12 +44,8 @@ export class Call {
     public handle(socket, payload): void {
         if (payload.event === 'call-connect') {
             this.callConnect(socket, payload);
-        } else if (payload.event === 'call-offer') {
-            this.callOffer(socket, payload);
-        } else if (payload.event === 'call-answer') {
-            this.callAnswer(socket, payload);
-        } else if (payload.event === 'call-candidate') {
-            this.callCandidate(socket, payload);
+        } else if (payload.event === 'call-signal') {
+            this.callSignal(socket, payload);
         }
     }
 
@@ -71,38 +56,21 @@ export class Call {
         // Init participant to room
         const participant = {
             socket: socket,
-            streams: null,
+            stream: null,
             peer: null
         };
 
         // Create peer connection
-        participant.peer = new RTCPeerConnection(this.peerConfig);
+        participant.peer = new Peer({ wrtc: wrtc });
 
-        // On ICE candidate
-        participant.peer.onicecandidate = ({ candidate }) => {
-            if (candidate) {
-                console.log(`send candidate to ${socket.id}`);
+        // On signal received
+        participant.peer.on('signal', data => {
+            socket.emit('call-signal', data);
+        });
 
-                socket.emit('call-candidate', { candidate: candidate });
-            }
-        };
-
-        // On negotiation needed
-        participant.peer.onnegotiationneeded = () => {
-            participant.peer.createOffer()
-                .then((description) => participant.peer.setLocalDescription(description))
-                .then(() => {
-                    console.log(`send offer to ${socket.id}`);
-                    
-                    socket.emit('call-offer', { description: participant.peer.localDescription });
-                });
-        };
-
-        // On track added
-        participant.peer.ontrack = ({ streams }) => {
-            console.log(`received tracks from ${socket.id}`);
-
-            participant.streams = streams;
+        // On stream added
+        participant.peer.on('stream', stream => {
+            participant.stream = stream;
 
             // Get participant call room name
             const roomName = Object.keys(this.io.sockets.adapter.sids[socket.id])
@@ -128,21 +96,13 @@ export class Call {
             }
 
             // Add my streams to the other participant 
-            participant.streams.forEach(stream => {
-                stream.getTracks().forEach((track) => {
-                    try { otherParticipant.peer.addTrack(track, stream); } catch (e) { }
-                });
-            });
+            otherParticipant.peer.addStream(participant.stream);
 
             // Add other participant's streams to me
-            if (otherParticipant.streams) {
-                otherParticipant.streams.forEach(stream => {
-                    stream.getTracks().forEach((track) => {
-                        try { participant.peer.addTrack(track, stream); } catch (e) { }
-                    });
-                });
+            if (otherParticipant.stream) {
+                participant.peer.addStream(otherParticipant.stream);
             }
-        };
+        });
 
         // Add participant to participants list
         this.participants.push(participant);
@@ -152,40 +112,10 @@ export class Call {
     }
 
     /**
-     * Handle call offer event.
+     * Handle call signal event.
      */
-    private callOffer(socket, payload) {
-        console.log(`received offer from ${socket.id}`);
-
+    private callSignal(socket, payload) {
         const participant = this.participants.find(participant => participant.socket.id === socket.id);
-
-        participant.peer.setRemoteDescription(payload.data.description)
-            .then(() => participant.peer.createAnswer())
-            .then((description) => participant.peer.setLocalDescription(description))
-            .then(() => {
-                socket.emit('call-answer', { description: participant.peer.localDescription });
-            });
-    }
-
-    /**
-     * Handle call answer event.
-     */
-    private callAnswer(socket, payload) {
-        console.log(`received answer from ${socket.id}`);
-
-        const participant = this.participants.find(participant => participant.socket.id === socket.id);
-
-        participant.peer.setRemoteDescription(payload.data.description);
-    }
-
-    /**
-     * Handle call candidate event.
-     */
-    private callCandidate(socket, payload) {
-        console.log(`received candidate from ${socket.id}`);
-
-        const participant = this.participants.find(participant => participant.socket.id === socket.id);
-
-        participant.peer.addIceCandidate(new RTCIceCandidate(payload.data.candidate));
+        participant.peer.signal(payload.data);
     }
 }
