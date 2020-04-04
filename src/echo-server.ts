@@ -245,7 +245,7 @@ export class EchoServer {
      * On call events.
      */
     onCallEvent(socket: any): void {
-        socket.on('video event', data => {
+        socket.on('call event', data => {
             this.channel.callEvent(socket, data);
         });
     }
