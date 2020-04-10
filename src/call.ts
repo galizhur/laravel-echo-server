@@ -1,121 +1,47 @@
-const Peer = require('simple-peer')
-const wrtc = require('wrtc')
+import { Signaling } from './signaling';
+import * as ioSfu from 'socket.io-client';
 
 /**
  * Laravel Echo Call handler
  */
 export class Call {
+    private ioEcho: any;
+    private options: any;
+    private signaling: Signaling;
 
-    /**
-     * Create new Call instance.
-     */
-    constructor(io: any, options: any) {
-        this.io = io;
+    constructor(ioEcho: any, options: any) {
+        this.ioEcho = ioEcho;
         this.options = options;
 
-        this.participants = [];
-    }
+        const socket = ioSfu.connect(this.options.sfuHost);
+        this.signaling = new Signaling(socket);
 
-    /**
-     * Socket.io client.
-     *
-     * @type {object}
-     */
-    private io: any;
+        socket.on('newConsumer', (data) => {
+            const payload = {
+                id: data.id,
+                producerId: data.producerId,
+                kind: data.kind,
+                rtpParameters: data.rtpParameters
+            };
 
-    /**
-     * Laravel Echo options.
-     *
-     * @type {object}
-     */
-    private options: any;
-
-    /**
-     * List of connected participants.
-     *
-     * @type {Array<object>}
-     */
-    private participants: Array<any>;
-
-
-    /**
-     * Handle call event.
-     */
-    public handle(socket, payload): void {
-        if (payload.event === 'call-connect') {
-            this.callConnect(socket, payload);
-        } else if (payload.event === 'call-signal') {
-            this.callSignal(socket, payload);
-        }
-    }
-
-    /**
-     * Handle call connect event.
-     */
-    private callConnect(socket, payload) {
-        // Init participant to room
-        const participant = {
-            socket: socket,
-            stream: null,
-            peer: null
-        };
-
-        // Create peer connection
-        participant.peer = new Peer({ wrtc: wrtc });
-
-        // On signal received
-        participant.peer.on('signal', data => {
-            socket.emit('call-signal', data);
+            this.ioEcho.to(data.socketId).emit('call-newConsumer', payload);
         });
-
-        // On stream added
-        participant.peer.on('stream', stream => {
-            participant.stream = stream;
-
-            // Get participant call room name
-            const roomName = Object.keys(this.io.sockets.adapter.sids[socket.id])
-                .find(roomName => roomName.startsWith('presence-App.Call.'));
-
-            if (roomName === undefined) {
-                return;
-            }
-
-            // Get other participant's socket id
-            const otherSocketId = Object.keys(this.io.sockets.adapter.rooms[roomName].sockets)
-                .find(socketId => socketId !== socket.id);
-
-            if (otherSocketId === undefined) {
-                return;
-            }
-
-            // Get other participant
-            const otherParticipant = this.participants.find(participant => participant.socket.id === otherSocketId);
-
-            if (otherParticipant === undefined) {
-                return;
-            }
-
-            // Add my streams to the other participant 
-            otherParticipant.peer.addStream(participant.stream);
-
-            // Add other participant's streams to me
-            if (otherParticipant.stream) {
-                participant.peer.addStream(otherParticipant.stream);
-            }
-        });
-
-        // Add participant to participants list
-        this.participants.push(participant);
-
-        // Accept RTC Peer connection request
-        socket.emit(payload.event, {});
     }
 
-    /**
-     * Handle call signal event.
-     */
-    private callSignal(socket, payload) {
-        const participant = this.participants.find(participant => participant.socket.id === socket.id);
-        participant.peer.signal(payload.data);
+    public handle(socket, payload, callback): void {
+        // Get call event type
+        const type = payload.event.replace('call-', '');
+
+        // Add socket id to sfu event payload
+        payload.data.socketId = socket.id;
+
+        // Forward event to sfu
+        this.signaling.request(type, payload.data)
+            .then(response => { callback(response) })
+            .catch(error => { callback({ error: error.message }) });
+    }
+
+    public leave(socket): void {
+        this.signaling.request('socketDisconnect', { socketId: socket.id });
     }
 }

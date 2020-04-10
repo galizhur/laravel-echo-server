@@ -85,7 +85,7 @@ export class Channel {
     /**
      * Trigger a call event
      */
-    callEvent(socket, data): void {
+    callEvent(socket, data, callback): void {
         try {
             data = JSON.parse(data);
         } catch (e) {
@@ -96,7 +96,7 @@ export class Channel {
             if (this.isCallEvent(data.event) &&
                 this.isPrivate(data.channel) &&
                 this.isInChannel(socket, data.channel)) {
-                this.call.handle(socket, data);
+                this.call.handle(socket, data, callback);
             }
         }
     }
@@ -107,7 +107,11 @@ export class Channel {
     leave(socket: any, channel: string, reason: string): void {
         if (channel) {
             if (this.isPresence(channel)) {
-                this.presence.leave(socket, channel)
+                this.presence.leave(socket, channel);
+
+                if (this.isCall(channel)) {
+                    this.call.leave(socket);
+                }
             }
 
             socket.leave(channel);
@@ -164,6 +168,13 @@ export class Channel {
      */
     isPresence(channel: string): boolean {
         return channel.lastIndexOf('presence-', 0) === 0;
+    }
+
+    /**
+     * Check if a channel is a call channel.
+     */
+    isCall(channel: string): boolean {
+        return channel.lastIndexOf('presence-App.Call.', 0) === 0;
     }
 
     /**
