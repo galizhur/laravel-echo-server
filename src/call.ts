@@ -97,4 +97,20 @@ export class Call {
             signalingElement.request('socketDisconnect', { socketId: socket.id });
         });
     }
+
+    public broadcast(channel, message): void {
+        const callInsufficientTokensEvent = this.options.callInsufficientTokensEvent || 'App\\Events\\CallInsufficientTokens';
+
+        if (message.event === callInsufficientTokensEvent) {
+            const room = this.ioEcho.sockets.adapter.rooms[channel];
+
+            if (room && room.sockets) {
+                Object.keys(room.sockets).forEach(socketId => {
+                    this.signaling.forEach(signalingElement => {
+                        signalingElement.request('socketDisconnect', { socketId });
+                    });
+                });
+            }
+        }
+    }
 }

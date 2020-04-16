@@ -101,6 +101,12 @@ export class Channel {
         }
     }
 
+    broadcast(channel, message): void {
+        if (channel.startsWith(`presence-App.Call.`)) {
+            this.call.broadcast(channel, message);
+        }
+    }
+
     /**
      * Leave a channel.
      */

@@ -140,6 +140,7 @@ export class EchoServer {
         return new Promise((resolve, reject) => {
             let subscribePromises = this.subscribers.map(subscriber => {
                 return subscriber.subscribe((channel, message) => {
+                    this.channel.broadcast(channel, message);
                     return this.broadcast(channel, message);
                 });
             });
