@@ -6,4 +6,3 @@ yarn-error.log
 .idea/
 laravel-echo-server*.json
 laravel-echo-server*.lock
-dump.rdb
