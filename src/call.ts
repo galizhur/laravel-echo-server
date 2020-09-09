@@ -17,7 +17,11 @@ export class Call {
         this.ioEcho = ioEcho;
         this.options = options;
 
-        this.redis = new Redis(this.options.databaseConfig.redis.port, this.options.databaseConfig.redis.host);
+        this.redis = new Redis({
+          host: this.options.databaseConfig.redis.host,
+          port: this.options.databaseConfig.redis.port,
+          password: this.options.databaseConfig.redis.password,
+        });
         this.redlock = new Redlock([this.redis]);
 
         this.signaling = [];
